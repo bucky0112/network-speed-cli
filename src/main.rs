@@ -10,7 +10,7 @@ async fn main() {
     let url = "http://http.speed.hinet.net/test_250m.zip";
     // let url = "http://http.speed.hinet.net/test_1024m.zip";
 
-    // 創建動態更新的任務
+    // 新增動態更新
     let loading_dots_task = task::spawn(async {
         let mut count = 0;
         loop {
@@ -19,11 +19,11 @@ async fn main() {
             if count <= 3 {
                 print!(".");
             } else {
-                // 重置計數器並移動光標回到起始位置，再次開始打印
+                // 重置計數器並移動游標回到起始位置，再次開始 print
                 count = 0;
                 print!("\r開始測試下載速度 ");
             }
-            // 強制立即輸出，而不緩存
+            // 強制立即輸出不緩存
             std::io::stdout().flush().unwrap();
         }
     });
@@ -45,7 +45,7 @@ async fn main() {
                     // 終止動態更新任務並清除留下的 "."
                     loading_dots_task.abort();
                     print!("\r{: <30}", ""); // 使用空格覆蓋整行
-                    print!("\r"); // 移動光標回行首
+                    print!("\r"); // 移動遊標回起始位置
 
                     println!("網路下載速度: {:.2} Mbps", speed_in_mbps);
                     println!("下載完成，耗時: {:.2} 秒", duration.as_secs_f64());
