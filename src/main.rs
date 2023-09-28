@@ -53,14 +53,23 @@ async fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use tokio::runtime::Runtime;
+    use mockito;
 
-    #[test]
-    fn test_download_speed() {
-        let rt = Runtime::new().unwrap();
-        let result = rt.block_on(download_speed("http://http.speed.hinet.net/test_200m.zip"));
-        let (speed, duration) = result.unwrap();
+    use crate::download_speed;
+
+    #[tokio::test]
+    async fn test_download_speed() {
+        let mut server = mockito::Server::new();
+
+        server.mock("GET", "/test_200m.zip")
+            .with_status(200)
+            .with_body("fake body content")
+            .create();
+
+        let url = &format!("{}/test_200m.zip", server.url());
+
+        let (speed, duration) = download_speed(url).await.unwrap();
+        
         assert!(speed > 0.0);
         assert!(duration > 0.0);
     }

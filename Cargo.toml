@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 indicatif = "0.17.7"
+mockito = "1.2.0"
 reqwest = "0.11.20"
 tokio = { version = "1.32.0", features = ["full"] }
