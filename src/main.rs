@@ -2,6 +2,28 @@ use indicatif::{ProgressBar, ProgressStyle};
 use reqwest;
 use std::time::{Duration, Instant};
 
+async fn download_speed(url: &str) -> Result<(f64, f64), String> {
+    let start_time = Instant::now();
+
+    match reqwest::get(url).await {
+        Ok(response) => {
+            if !response.status().is_success() {
+                return Err(format!("HTTP Error: {:?}", response.status()));
+            }
+            match response.bytes().await {
+                Ok(bytes) => {
+                    let duration = start_time.elapsed();
+                    let speed_in_mbps =
+                        (bytes.len() * 8) as f64 / duration.as_secs_f64() / 1_000_000.0;
+                    Ok((speed_in_mbps, duration.as_secs_f64()))
+                }
+                Err(e) => Err(format!("Error reading bytes: {:?}", e)),
+            }
+        }
+        Err(e) => Err(format!("Download error: {:?}", e)),
+    }
+}
+
 #[tokio::main]
 async fn main() {
     // let url = "http://http.speed.hinet.net/test_200m.zip";
@@ -16,36 +38,30 @@ async fn main() {
     );
     spinner.enable_steady_tick(Duration::from_millis(100));
 
-    let start_time = Instant::now();
-
-    match reqwest::get(url).await {
-        Ok(response) => {
-            if !response.status().is_success() {
-                println!("測試下載時發生錯誤: {:?}", response.status());
-                spinner.finish_and_clear();
-                return;
-            }
-
-            match response.bytes().await {
-                Ok(bytes) => {
-                    let duration = start_time.elapsed();
-                    let speed_in_mbps =
-                        (bytes.len() * 8) as f64 / duration.as_secs_f64() / 1_000_000.0;
-
-                    spinner.finish_and_clear();
-
-                    println!("網路下載速度: {:.2} Mbps", speed_in_mbps);
-                    println!("下載完成，耗時: {:.2} 秒", duration.as_secs_f64());
-                }
-                Err(e) => {
-                    spinner.finish_and_clear();
-                    println!("讀取下載資料時發生錯誤: {:?}", e);
-                }
-            }
+    match download_speed(url).await {
+        Ok((speed, duration)) => {
+            spinner.finish_and_clear();
+            println!("網路下載速度: {:.2} Mbps", speed);
+            println!("下載完成，耗時: {:.2} 秒", duration);
         }
         Err(e) => {
             spinner.finish_and_clear();
-            println!("下載時發生錯誤: {:?}", e);
+            println!("{}", e);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::runtime::Runtime;
+
+    #[test]
+    fn test_download_speed() {
+        let rt = Runtime::new().unwrap();
+        let result = rt.block_on(download_speed("http://http.speed.hinet.net/test_200m.zip"));
+        let (speed, duration) = result.unwrap();
+        assert!(speed > 0.0);
+        assert!(duration > 0.0);
     }
 }
